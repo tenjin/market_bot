@@ -75,28 +75,48 @@ module MarketBot
           end
         end
 
-        a_genres              = doc.search('a[itemprop="genre"]')
-        a_genre               = a_genres[0]
+        a_genres = doc.search('a[itemprop="genre"]')
+        if a_genres.blank?
+          begin
+            text = doc.search("//script[contains(text(),'SoftwareApplication')]").text
+            data = JSON.parse(text)
 
-        result[:categories]      = a_genres.map { |d| d.text.strip }
-        result[:categories_urls] = a_genres.map { |d| File.split(d['href'])[1] }
+            result[:categories]      = [data['applicationCategory']]
+            result[:categories_urls] = ["https://play.google.com/store/apps/category/#{data['applicationCategory']}"]
+
+            result[:content_rating] = data['contentRating']
+            data.dig('aggregateRating', 'ratingValue')
+
+            developer_div          = doc.at_css('h1[itemprop="name"]').next
+            result[:developer]     = data.dig('author', 'name')
+            result[:developer_url] = developer_div.css('a').attr('href').value
+            result[:developer_id]  = result[:developer_url].split('?id=').last.strip
+
+            result[:rating] = data.dig('aggregateRating', 'ratingValue')
+            result[:votes]  = data.dig('aggregateRating', 'ratingCount').to_i
+
+            result[:cover_image_url] = data['image']
+
+            result[:updated] ||= text = doc.search("meta[itemprop='description']")[0].parent.children.last.children.last.children.last.text
+          rescue
+            # :shrug:
+          end
+        else
+          a_genre = a_genres[0]
+
+          result[:categories]      = a_genres.map { |d| d.text.strip }
+          result[:categories_urls] = a_genres.map { |d| File.split(d['href'])[1] }
+
+          result[:content_rating] = a_genre.parent.parent.next.text
+          span_dev                = a_genre.parent.previous
+
+          result[:developer]     = span_dev.children[0].text
+          result[:developer_url] = span_dev.children[0].attr('href')
+          result[:developer_id]  = result[:developer_url].split('?id=').last.strip
+        end
 
         result[:category]     = result[:categories].first
         result[:category_url] = result[:categories_urls].first
-
-        if a_genre.nil?
-          content_rating_span     = doc.search('span[itemprop="contentRating"]')[0]
-          result[:content_rating] = content_rating_span && content_rating_span.text
-          span_dev                = doc.at_css('h1[itemprop="name"]').next.children[0]
-
-        else
-          result[:content_rating] = a_genre.parent.parent.next.text
-          span_dev                = a_genre.parent.previous
-        end
-
-        result[:developer]     = span_dev.children[0].text
-        result[:developer_url] = span_dev.children[0].attr('href')
-        result[:developer_id]  = result[:developer_url].split('?id=').last.strip
 
         result[:price]          = doc.at_css('meta[itemprop="price"]')[:content] if doc.at_css('meta[itemprop="price"]')
 
@@ -106,10 +126,14 @@ module MarketBot
         result[:title]        = doc.at_css('h1[itemprop="name"]').text
 
         if doc.at_css('meta[itemprop="ratingValue"]')
-          node            = doc.at_css('meta[itemprop="ratingValue"]')
-          result[:rating] = node[:content].strip if node
-          node            = doc.at_css('meta[itemprop="reviewCount"]')
-          result[:votes]  = node[:content].strip.to_i if node
+          unless result[:rating]
+            node            = doc.at_css('meta[itemprop="ratingValue"]')
+            result[:rating] = node[:content].strip if node
+          end
+          unless result[:votes]
+            node            = doc.at_css('meta[itemprop="reviewCount"]')
+            result[:votes]  = node[:content].strip.to_i if node
+          end
         end
 
         a_similar = doc.at_css('a:contains("Similar")')
@@ -137,7 +161,7 @@ module MarketBot
         end
 
         node = doc.at_css('img[alt="Cover art"]')
-        unless node.nil?
+        unless node.nil? || result[:cover_image_url]
           result[:cover_image_url] = MarketBot::Util.fix_content_url(node[:src])
         end
 
