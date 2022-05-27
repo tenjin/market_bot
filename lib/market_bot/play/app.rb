@@ -84,12 +84,19 @@ module MarketBot
         result[:category]     = result[:categories].first
         result[:category_url] = result[:categories_urls].first
 
-        span_dev               = a_genre.parent.previous
+        if a_genre.nil?
+          content_rating_span     = doc.search('span[itemprop="contentRating"]')[0]
+          result[:content_rating] = content_rating_span && content_rating_span.text
+          span_dev                = doc.at_css('h1[itemprop="name"]').next.children[0]
+
+        else
+          result[:content_rating] = a_genre.parent.parent.next.text
+          span_dev                = a_genre.parent.previous
+        end
+
         result[:developer]     = span_dev.children[0].text
         result[:developer_url] = span_dev.children[0].attr('href')
         result[:developer_id]  = result[:developer_url].split('?id=').last.strip
-
-        result[:content_rating] = a_genre.parent.parent.next.text
 
         result[:price]          = doc.at_css('meta[itemprop="price"]')[:content] if doc.at_css('meta[itemprop="price"]')
 
@@ -115,14 +122,18 @@ module MarketBot
           end.compact.uniq
         end
 
-        h2_more = doc.at_css("h2:contains(\"#{result[:developer]}\")")
-        if h2_more
-          more_divs                    = h2_more.parent.next.children
-          result[:more_from_developer] = more_divs.search('a').select do |a|
-            a['href'].start_with?('/store/apps/details')
-          end.map do |a|
-            { package: a['href'].split('?id=').last.strip }
-          end.compact.uniq
+        begin
+          h2_more = doc.at_css("h2:contains(\"#{result[:developer]}\")")
+          if h2_more
+            more_divs                    = h2_more.parent.next.children
+            result[:more_from_developer] = more_divs.search('a').select do |a|
+              a['href'].start_with?('/store/apps/details')
+            end.map do |a|
+              { package: a['href'].split('?id=').last.strip }
+            end.compact.uniq
+          end
+        rescue NoMethodError
+          result[:more_from_developer] = []
         end
 
         node = doc.at_css('img[alt="Cover art"]')
