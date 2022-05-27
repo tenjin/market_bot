@@ -98,6 +98,17 @@ module MarketBot
             result[:cover_image_url] = data['image']
 
             result[:updated] ||= text = doc.search("meta[itemprop='description']")[0].parent.children.last.children.last.children.last.text
+
+            unless result[:current_version]
+              text    = doc.search('//script[starts-with(text(),"AF_initDataCallback({key: \'ds:4\'")]').text
+              l_index = text.index('AF_initDataCallback')+20
+              r_index = text.rindex('}')
+              hash    = text[l_index..r_index].gsub("'", '"').gsub(/(key|hash|data|sideChannel):/, "\"\\1\":")
+              js_data = JSON.parse(hash)
+
+              # this makes no sense but this is the only place to get the version number
+              result[:current_version] = js_data['data'][1][2][140][0][0][0]
+            end
           rescue
             # :shrug:
           end

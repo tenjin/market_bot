@@ -26,8 +26,7 @@ describe MarketBot::Play::App do
       expect(@parsed[:cover_image_url]).to match(/\Ahttps:\/\//)
     end
 
-    # need to fix this
-    xit 'should parse the current_version attribute' do
+    it 'should parse the current_version attribute' do
       expect(@parsed[:current_version]).to be_kind_of(String)
       expect(@parsed[:current_version].length).to be > 0
       expect(@parsed[:current_version]).to match(/\A\d/).and match(/\d\z/)
