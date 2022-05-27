@@ -2,7 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '../../../spec_helper')
 
 describe MarketBot::Play::App do
   shared_context('parsing an app') do
-    xit 'should parse the category attribute' do
+    # need to fix this
+    it 'should parse the category attribute' do
       expect(@parsed[:category]).to eq('Arcade').or eq('Weather').or eq('Simulation')
     end
 
@@ -22,11 +23,13 @@ describe MarketBot::Play::App do
       expect(@parsed[:content_rating]).to eq('Unrated').or eq('Everyone')
     end
 
-    xit 'should parse the cover_image_url attribute' do
+    # need to fix this
+    it 'should parse the cover_image_url attribute' do
       expect(@parsed[:cover_image_url]).to match(/\Ahttps:\/\//)
     end
 
-    xit 'should parse the current_version attribute' do
+    # need to fix this
+    it 'should parse the current_version attribute' do
       expect(@parsed[:current_version]).to be_kind_of(String)
       expect(@parsed[:current_version].length).to be > 0
       expect(@parsed[:current_version]).to match(/\A\d/).and match(/\d\z/)
@@ -77,7 +80,8 @@ describe MarketBot::Play::App do
       expect(@parsed[:price]).to eq('0').or match(/\A\$\d+\.\d\d\z/)
     end
 
-    xit 'should parse the rating attribute' do
+    # possibly fix this
+    it 'should parse the rating attribute' do
       expect(@parsed[:rating]).to be_kind_of(String).and match(/\A\d\.\d.+\z/)
     end
 
@@ -114,12 +118,14 @@ describe MarketBot::Play::App do
       expect(@parsed[:title].length).to be > 5
     end
 
+    # possibly fix this
     xit 'should parse the updated attribute' do
       expect(@parsed[:updated]).to be_kind_of(String).and \
         match(/\A[A-Z][a-z]+ \d+, 20\d\d\z/)
     end
 
-    xit 'should parse the votes attribute' do
+    # possibly fix this
+    it 'should parse the votes attribute' do
       expect(@parsed[:votes]).to be_kind_of(expected_number_class).and be >= 0
     end
 
