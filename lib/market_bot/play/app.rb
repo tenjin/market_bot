@@ -167,7 +167,12 @@ module MarketBot
               { package: a['href'].split('?id=').last.strip }
             end.compact.uniq
           end
-        rescue NoMethodError
+        rescue
+          # :more_from_developer is not important for our purposes; ignore any parsing errors from this block
+          #
+          # TODO: Maybe this gem should "fail open" when it encounters parsing errors, s.t. values returned for various
+          # keys could be some class of object that indicates that a non-critical error occurred
+          # (but not raise an Exception).
           result[:more_from_developer] = []
         end
 
