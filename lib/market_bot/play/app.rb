@@ -134,7 +134,7 @@ module MarketBot
         result[:contains_ads] = !!doc.at('div:contains("Contains Ads")')
 
         result[:description]  = doc.at_css('div[itemprop="description"]').inner_html.strip if doc.at_css('div[itemprop="description"]')
-        result[:title]        = doc.at_css('h1[itemprop="name"]').text
+        result[:title]        = doc.at_css('span[itemprop="name"]').text
 
         if doc.at_css('meta[itemprop="ratingValue"]')
           unless result[:rating]
