@@ -85,11 +85,9 @@ module MarketBot
             result[:categories_urls] = ["https://play.google.com/store/apps/category/#{data['applicationCategory']}"]
 
             result[:content_rating] = data['contentRating']
-            data.dig('aggregateRating', 'ratingValue')
 
-            developer_div          = doc.at_css('h1[itemprop="name"]').next
             result[:developer]     = data.dig('author', 'name')
-            result[:developer_url] = developer_div.css('a').attr('href').value
+            result[:developer_url] = data.dig('author', 'url')
             result[:developer_id]  = result[:developer_url].split('?id=').last.strip
 
             result[:rating] = data.dig('aggregateRating', 'ratingValue')
@@ -97,7 +95,7 @@ module MarketBot
 
             result[:cover_image_url] = data['image']
 
-            result[:updated] ||= text = doc.search("meta[itemprop='description']")[0].parent.children.last.children.last.children.last.text
+            result[:updated] ||= text = doc.at('meta[itemprop="description"] + div + div > div:first > div[2]').text
 
             unless result[:current_version]
               text    = doc.search('//script[starts-with(text(),"AF_initDataCallback({key: \'ds:4\'")]').text
