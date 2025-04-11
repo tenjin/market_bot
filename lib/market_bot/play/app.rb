@@ -9,7 +9,7 @@ module MarketBot
       def self.parse(html, _opts = {})
         result = {}
 
-        doc = Nokogiri::HTML(html)
+        doc = Nokogiri::HTML(html, nil, 'UTF-8', &:noent)
 
         h2_additional_info = doc.at('h2:contains("Additional Information")')
         if h2_additional_info
