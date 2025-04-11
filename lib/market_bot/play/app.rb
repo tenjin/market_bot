@@ -75,34 +75,74 @@ module MarketBot
           end
         end
 
-        a_genres              = doc.search('a[itemprop="genre"]')
-        a_genre               = a_genres[0]
+        a_genres = doc.search('a[itemprop="genre"]')
+        if a_genres.blank?
+          begin
+            text = doc.search("//script[contains(text(),'SoftwareApplication')]").text
+            data = JSON.parse(text)
 
-        result[:categories]      = a_genres.map { |d| d.text.strip }
-        result[:categories_urls] = a_genres.map { |d| File.split(d['href'])[1] }
+            result[:categories]      = [data['applicationCategory']]
+            result[:categories_urls] = ["https://play.google.com/store/apps/category/#{data['applicationCategory']}"]
+
+            result[:content_rating] = data['contentRating']
+
+            result[:developer]     = data.dig('author', 'name')
+            result[:developer_url] = data.dig('author', 'url')
+            result[:developer_id]  = result[:developer_url].split('?id=').last.strip
+
+            result[:rating] = data.dig('aggregateRating', 'ratingValue')
+            result[:votes]  = data.dig('aggregateRating', 'ratingCount').to_i
+
+            result[:cover_image_url] = data['image']
+
+            result[:updated] ||= text = doc.at('meta[itemprop="description"] + div + div > div:first > div[2]').text
+
+            unless result[:current_version]
+              text    = doc.search('//script[starts-with(text(),"AF_initDataCallback({key: \'ds:4\'")]').text
+              l_index = text.index('AF_initDataCallback')+20
+              r_index = text.rindex('}')
+              hash    = text[l_index..r_index].gsub("'", '"').gsub(/(key|hash|data|sideChannel):/, "\"\\1\":")
+              js_data = JSON.parse(hash)
+
+              # this makes no sense but this is the only place to get the version number
+              result[:current_version] = js_data['data'][1][2][140][0][0][0]
+            end
+          rescue
+            # :shrug:
+          end
+        else
+          a_genre = a_genres[0]
+
+          result[:categories]      = a_genres.map { |d| d.text.strip }
+          result[:categories_urls] = a_genres.map { |d| File.split(d['href'])[1] }
+
+          result[:content_rating] = a_genre.parent.parent.next.text
+          span_dev                = a_genre.parent.previous
+
+          result[:developer]     = span_dev.children[0].text
+          result[:developer_url] = span_dev.children[0].attr('href')
+          result[:developer_id]  = result[:developer_url].split('?id=').last.strip
+        end
 
         result[:category]     = result[:categories].first
         result[:category_url] = result[:categories_urls].first
-
-        span_dev               = a_genre.parent.previous
-        result[:developer]     = span_dev.children[0].text
-        result[:developer_url] = span_dev.children[0].attr('href')
-        result[:developer_id]  = result[:developer_url].split('?id=').last.strip
-
-        result[:content_rating] = a_genre.parent.parent.next.text
 
         result[:price]          = doc.at_css('meta[itemprop="price"]')[:content] if doc.at_css('meta[itemprop="price"]')
 
         result[:contains_ads] = !!doc.at('div:contains("Contains Ads")')
 
         result[:description]  = doc.at_css('div[itemprop="description"]').inner_html.strip if doc.at_css('div[itemprop="description"]')
-        result[:title]        = doc.at_css('h1[itemprop="name"]').text
+        result[:title]        = doc.at_css('span[itemprop="name"]').text
 
         if doc.at_css('meta[itemprop="ratingValue"]')
-          node            = doc.at_css('meta[itemprop="ratingValue"]')
-          result[:rating] = node[:content].strip if node
-          node            = doc.at_css('meta[itemprop="reviewCount"]')
-          result[:votes]  = node[:content].strip.to_i if node
+          unless result[:rating]
+            node            = doc.at_css('meta[itemprop="ratingValue"]')
+            result[:rating] = node[:content].strip if node
+          end
+          unless result[:votes]
+            node            = doc.at_css('meta[itemprop="reviewCount"]')
+            result[:votes]  = node[:content].strip.to_i if node
+          end
         end
 
         a_similar = doc.at_css('a:contains("Similar")')
@@ -115,18 +155,27 @@ module MarketBot
           end.compact.uniq
         end
 
-        h2_more = doc.at_css("h2:contains(\"#{result[:developer]}\")")
-        if h2_more
-          more_divs                    = h2_more.parent.next.children
-          result[:more_from_developer] = more_divs.search('a').select do |a|
-            a['href'].start_with?('/store/apps/details')
-          end.map do |a|
-            { package: a['href'].split('?id=').last.strip }
-          end.compact.uniq
+        begin
+          h2_more = doc.at_css("h2:contains(\"#{result[:developer]}\")")
+          if h2_more
+            more_divs                    = h2_more.parent.next.children
+            result[:more_from_developer] = more_divs.search('a').select do |a|
+              a['href'].start_with?('/store/apps/details')
+            end.map do |a|
+              { package: a['href'].split('?id=').last.strip }
+            end.compact.uniq
+          end
+        rescue
+          # :more_from_developer is not important for our purposes; ignore any parsing errors from this block
+          #
+          # TODO: Maybe this gem should "fail open" when it encounters parsing errors, s.t. values returned for various
+          # keys could be some class of object that indicates that a non-critical error occurred
+          # (but not raise an Exception).
+          result[:more_from_developer] = []
         end
 
         node = doc.at_css('img[alt="Cover art"]')
-        unless node.nil?
+        unless node.nil? || result[:cover_image_url]
           result[:cover_image_url] = MarketBot::Util.fix_content_url(node[:src])
         end
 
