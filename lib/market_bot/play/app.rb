@@ -20,6 +20,17 @@ module MarketBot
           result[:size]                  = node.children[1].text if node
           node                           = additional_info_parent.at('div:contains("Installs")')
           result[:installs]              = node.children[1].text if node
+          if result[:installs].blank?
+            # Look for install count near "Downloads"
+            doc.search('*').each do |element|
+              text = element.text.strip
+
+              if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download')
+                result[:installs] = text
+                break
+              end
+            end
+          end
           node                           = additional_info_parent.at('div:contains("Current Version")')
           result[:current_version]       = node.children[1].text if node
           node                           = additional_info_parent.at('div:contains("Requires Android")')
