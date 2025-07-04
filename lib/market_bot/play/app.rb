@@ -11,7 +11,7 @@ module MarketBot
 
         doc = Nokogiri::HTML(html, nil, 'UTF-8', &:noent)
 
-        h2_additional_info = doc.at('h2:contains("Additional Information")')
+        h2_additional_info = doc.at('h2:contains("About this game")')
         if h2_additional_info
           additional_info_parent         = h2_additional_info.parent.next.children.children
           node                           = additional_info_parent.at('div:contains("Updated")')
