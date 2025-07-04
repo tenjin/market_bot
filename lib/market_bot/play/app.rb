@@ -74,6 +74,18 @@ module MarketBot
             end
           end
         end
+        
+        if result[:installs].blank?
+          # Look for install count near "Downloads"
+          doc.search('*').each do |element|
+            text = element.text.strip
+
+            if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download')
+              result[:installs] = text
+              break
+            end
+          end
+        end
 
         a_genres = doc.search('a[itemprop="genre"]')
         if a_genres.blank?
