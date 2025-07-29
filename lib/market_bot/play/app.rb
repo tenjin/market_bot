@@ -80,7 +80,7 @@ module MarketBot
           doc.search('*').each do |element|
             text = element.text.strip
 
-            if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download')
+            if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download') && (element.name == 'div' && element['class'])
               result[:installs] = text
               break
             end
