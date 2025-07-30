@@ -79,8 +79,9 @@ module MarketBot
           # Look for install count near "Downloads"
           doc.search('*').each do |element|
             text = element.text.strip
+            css_class = element['class']&.strip
 
-            if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download')
+            if text.match?(/^\d+[KMB]?\+?$/) && element.parent&.text&.downcase&.include?('download') && (element.name == 'div' && css_class && css_class.length == 5)
               result[:installs] = text
               break
             end
